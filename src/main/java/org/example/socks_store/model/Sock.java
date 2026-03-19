@@ -36,4 +36,6 @@ public class Sock {
     @NotNull(message = "You must set quantity")
     @Min(value = 0, message = "Set correct quantity, it can't be less 0")
     private int quantity;
+
+
 }
