@@ -1,0 +1,124 @@
+package org.example.socks_store.controller;
+
+import jakarta.annotation.Resource;
+import org.example.socks_store.dto.SockDto;
+import org.example.socks_store.mapper.SockMapperImpl;
+import org.example.socks_store.model.Sock;
+import org.example.socks_store.repository.SocksRepository;
+import org.example.socks_store.service.SocksService;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.Optional;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+
+@WebMvcTest(controllers = SocksController.class)
+@AutoConfigureMockMvc
+@Import(value = {
+        SocksService.class,
+        SockMapperImpl.class
+})
+class SocksControllerTest {
+
+    @Resource
+    private MockMvc mockMvc;
+
+    @Resource
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private SocksRepository socksRepository;
+
+    @ParameterizedTest
+    @CsvSource({
+            "true",
+            "false"
+    })
+    void incomeSocksTest(boolean isSockPresent) throws Exception {
+        Sock sockEntity = Sock.builder()
+                .id(1L)
+                .color("black")
+                .cottonPercentage(30)
+                .quantity(4)
+                .build();
+
+        SockDto sockDto = SockDto.builder()
+                .id(1L)
+                .color("black")
+                .cottonPercentage(30)
+                .quantity(4)
+                .build();
+        String url = "/api/socks/income";
+
+        if (isSockPresent) {
+            when(socksRepository.findByColorAndCottonPercentage(sockDto.getColor(), sockDto.getCottonPercentage()))
+                    .thenReturn(Optional.of(sockEntity));
+
+            MvcResult mvcResult = mockMvc.perform(post(url)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(sockDto))
+                            .characterEncoding("UTF-8")
+                    )
+                    .andReturn();
+
+            Assertions.assertEquals(mvcResult.getResponse().getStatus(), 200);
+            Assertions.assertEquals(mvcResult.getResponse().getContentAsString(), "[]Socks of color=black was add. Total quantity = 8");
+
+        } else {
+            MvcResult mvcResult = mockMvc.perform(post(url)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(sockDto))
+                            .characterEncoding("UTF-8")
+                    )
+                    .andReturn();
+
+            Assertions.assertEquals(mvcResult.getResponse().getStatus(), 200);
+            Assertions.assertEquals(mvcResult.getResponse().getContentAsString(), "[]Socks of color=black was created. Total quantity = 4");
+        }
+    }
+
+    @Test
+    void outcomeSocksTest() throws Exception {
+        Sock sockEntity = Sock.builder()
+                .id(1L)
+                .color("black")
+                .cottonPercentage(30)
+                .quantity(4)
+                .build();
+
+        SockDto sockDto = SockDto.builder()
+                .id(1L)
+                .color("black")
+                .cottonPercentage(30)
+                .quantity(4)
+                .build();
+        String url = "/api/socks/outcome";
+
+        when(socksRepository.findByColorAndCottonPercentage(sockDto.getColor(), sockDto.getCottonPercentage()))
+                .thenReturn(Optional.of(sockEntity));
+
+        MvcResult mvcResult = mockMvc.perform(post(url)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sockDto))
+                        .characterEncoding("UTF-8")
+                )
+                .andReturn();
+
+        Assertions.assertEquals(mvcResult.getResponse().getStatus(), 200);
+        Assertions.assertEquals(mvcResult.getResponse().getContentAsString(), "[]Socks of color=black was outcoming. Rest quantity = 0");
+
+
+    }
+}
