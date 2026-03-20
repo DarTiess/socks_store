@@ -5,10 +5,7 @@ import org.example.socks_store.dto.SockDto;
 import org.example.socks_store.service.SocksService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/socks")
@@ -34,7 +31,12 @@ public class SocksController {
 
     // @GetMapping("/")
 
-    // @PutMapping("/{id}")
+     @PutMapping("/{id}")
+    public ResponseEntity<String> updateSock(@NotNull @PathVariable("id") Long id,
+                                             @NotNull @RequestBody SockDto sockDto){
+         String message = socksService.updateSock(id, sockDto);
+         return ResponseEntity.ok(message);
+     }
 
     // @PostMapping("/batch")
 }

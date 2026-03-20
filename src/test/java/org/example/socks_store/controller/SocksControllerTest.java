@@ -5,8 +5,9 @@ import org.example.socks_store.dto.SockDto;
 import org.example.socks_store.mapper.SockMapperImpl;
 import org.example.socks_store.model.Sock;
 import org.example.socks_store.repository.SocksRepository;
-import org.example.socks_store.service.SocksService;
+import org.example.socks_store.service.SocksServiceImpl;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -21,13 +22,16 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = SocksController.class)
 @AutoConfigureMockMvc
 @Import(value = {
-        SocksService.class,
+        SocksServiceImpl.class,
         SockMapperImpl.class
 })
 class SocksControllerTest {
@@ -40,6 +44,25 @@ class SocksControllerTest {
 
     @MockitoBean
     private SocksRepository socksRepository;
+    private Sock sockEntity;
+    private SockDto sockDto;
+
+    @BeforeEach
+    public void setUp() {
+        sockEntity = Sock.builder()
+                .id(1L)
+                .color("black")
+                .cottonPercentage(30)
+                .quantity(4)
+                .build();
+
+        sockDto = SockDto.builder()
+                .id(1L)
+                .color("black")
+                .cottonPercentage(30)
+                .quantity(4)
+                .build();
+    }
 
     @ParameterizedTest
     @CsvSource({
@@ -47,19 +70,7 @@ class SocksControllerTest {
             "false"
     })
     void incomeSocksTest(boolean isSockPresent) throws Exception {
-        Sock sockEntity = Sock.builder()
-                .id(1L)
-                .color("black")
-                .cottonPercentage(30)
-                .quantity(4)
-                .build();
 
-        SockDto sockDto = SockDto.builder()
-                .id(1L)
-                .color("black")
-                .cottonPercentage(30)
-                .quantity(4)
-                .build();
         String url = "/api/socks/income";
 
         if (isSockPresent) {
@@ -91,19 +102,6 @@ class SocksControllerTest {
 
     @Test
     void outcomeSocksTest() throws Exception {
-        Sock sockEntity = Sock.builder()
-                .id(1L)
-                .color("black")
-                .cottonPercentage(30)
-                .quantity(4)
-                .build();
-
-        SockDto sockDto = SockDto.builder()
-                .id(1L)
-                .color("black")
-                .cottonPercentage(30)
-                .quantity(4)
-                .build();
         String url = "/api/socks/outcome";
 
         when(socksRepository.findByColorAndCottonPercentage(sockDto.getColor(), sockDto.getCottonPercentage()))
@@ -120,5 +118,22 @@ class SocksControllerTest {
         Assertions.assertEquals(mvcResult.getResponse().getContentAsString(), "[]Socks of color=black was outcoming. Rest quantity = 0");
 
 
+    }
+
+    @Test
+    void updateSock() throws Exception {
+        String url = "/api/socks/%d";
+
+        when(socksRepository.findById(anyLong()))
+                .thenReturn(Optional.of(sockEntity));
+
+        mockMvc.perform(put(url.formatted(1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sockDto))
+                        .characterEncoding("UTF-8")
+                )
+                .andExpect(status().is(200))
+                .andExpect(content()
+                        .bytes("[]Socks of color=black was updating. Quantity = 4".getBytes()));
     }
 }
