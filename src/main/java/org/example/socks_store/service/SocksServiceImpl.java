@@ -1,5 +1,6 @@
 package org.example.socks_store.service;
 
+import jakarta.transaction.Transactional;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class SocksServiceImpl implements SocksService {
 
     private final SocksRepository socksRepository;
@@ -97,7 +99,7 @@ public class SocksServiceImpl implements SocksService {
             CSVParser csvParser =  new CSVParser(
                     reader,
                     CSVFormat.DEFAULT.builder()
-                            .setHeader("id", "color", "cottonPercentage", "quantity")
+                            .setHeader("color", "cottonPercentage", "quantity")
                             .setSkipHeaderRecord(true)
                             .setIgnoreHeaderCase(true)
                             .setTrim(true)
@@ -105,13 +107,11 @@ public class SocksServiceImpl implements SocksService {
             );
 
             for (CSVRecord csvRecord:csvParser){
-                long id =Long.parseLong(csvRecord.get("id"));
                 String color =csvRecord.get("color");
                 int cottonPercentage = Integer.parseInt(csvRecord.get("cottonPercentage"));
                 int quantity = Integer.parseInt(csvRecord.get("quantity"));
 
                 SockDto sockDto = SockDto.builder()
-                        .id(id)
                         .color(color)
                         .cottonPercentage(cottonPercentage)
                         .quantity(quantity)

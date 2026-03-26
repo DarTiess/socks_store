@@ -1,4 +1,4 @@
-id, color, cottonPercentage, quantity
-43, red, 80, 100
-23, green, 54, 39
-65, blue, 76, 95
+color, cottonPercentage, quantity
+yellow, 80, 100
+green, 54, 39
+pink, 76, 95
