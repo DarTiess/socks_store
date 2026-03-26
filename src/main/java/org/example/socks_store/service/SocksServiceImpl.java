@@ -1,5 +1,6 @@
 package org.example.socks_store.service;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.Transactional;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -13,9 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Transactional
@@ -93,10 +92,11 @@ public class SocksServiceImpl implements SocksService {
             throw new IllegalArgumentException();
         }
 
-        List<SockDto> sockDtoList = new ArrayList<>();
+        Map<String, SockDto> sockDtoMap = new HashMap<>();
+        int errorsCount = 0;
 
-        try (InputStreamReader reader = new InputStreamReader(multipartFile.getInputStream())){
-            CSVParser csvParser =  new CSVParser(
+        try (InputStreamReader reader = new InputStreamReader(multipartFile.getInputStream())) {
+            CSVParser csvParser = new CSVParser(
                     reader,
                     CSVFormat.DEFAULT.builder()
                             .setHeader("color", "cottonPercentage", "quantity")
@@ -106,46 +106,95 @@ public class SocksServiceImpl implements SocksService {
                             .build()
             );
 
-            for (CSVRecord csvRecord:csvParser){
-                String color =csvRecord.get("color");
+            for (CSVRecord csvRecord : csvParser) {
+                String color = csvRecord.get("color");
+                String cottonPercentageStr = csvRecord.get("cottonPercentage");
+                String quantityStr = csvRecord.get("quantity");
+
+                if (color == null
+                        || cottonPercentageStr == null
+                        || quantityStr == null
+                        || color.isEmpty()
+                        || cottonPercentageStr.isEmpty()
+                        || quantityStr.isEmpty()) {
+
+                    errorsCount++;
+                    continue;
+                }
+
                 int cottonPercentage = Integer.parseInt(csvRecord.get("cottonPercentage"));
                 int quantity = Integer.parseInt(csvRecord.get("quantity"));
 
-                SockDto sockDto = SockDto.builder()
-                        .color(color)
-                        .cottonPercentage(cottonPercentage)
-                        .quantity(quantity)
-                        .build();
+                String key = color.toLowerCase() + "-" + cottonPercentage;
 
-                sockDtoList.add(sockDto);
+                SockDto sockDtoExisted = sockDtoMap.get(key);
+
+                if (sockDtoExisted == null) {
+                    sockDtoMap.put(key, SockDto.builder()
+                            .color(color)
+                            .cottonPercentage(cottonPercentage)
+                            .quantity(quantity)
+                            .build());
+                } else {
+                    sockDtoExisted.setQuantity(sockDtoExisted.getQuantity() + quantity);
+                }
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             throw new IllegalArgumentException();
         }
 
+        List<SockDto> sockDtoList = createDtoList(sockDtoMap);
         socksRepository.saveAll(sockMapper.dtoListToEntitiesList(sockDtoList));
 
-        return "[]File was parsing and add to database successfully. Quantity = %d"
-                .formatted(sockDtoList.size());
+        return "[]File was parsing and add to database successfully. Quantity = %d. Was find %d errors"
+                .formatted(sockDtoList.size(), errorsCount);
     }
 
     @Override
     public long searchSocks(String color, Integer cottonPercentage, String sortOperator) {
-       return switch (sortOperator){
+
+        String resultColor = color == null ? "*" : color;
+        int resultCottonPercentage = cottonPercentage == null ? 0 : cottonPercentage;
+
+        return switch (sortOperator) {
             case "equal" -> socksRepository.sumQuantityByColorAndCottonPercentageEquals(
-                    color, cottonPercentage
+                    resultColor, resultCottonPercentage
             );
             case "lessThan" -> socksRepository.sumQuantityByColorAndCottonPercentageLessThan(
-                    color, cottonPercentage
+                    resultColor, resultCottonPercentage
             );
             case "moreThan" -> socksRepository.sumQuantityByColorAndCottonPercentageGreaterThan(
-                    color, cottonPercentage
+                    resultColor, resultCottonPercentage
             );
             default -> throw new IllegalArgumentException();
-       };
+        };
     }
 
-    private boolean isCSVFile(MultipartFile file){
+
+
+    private List<SockDto> createDtoList(Map<String, SockDto> sockDtoMap) {
+        List<SockDto> sockDtoList = new ArrayList<>();
+
+        for (SockDto sockDto : sockDtoMap.values()) {
+            Optional<Sock> sockOptional = socksRepository
+                    .findByColorAndCottonPercentage(
+                            sockDto.getColor(), sockDto.getCottonPercentage());
+            if (sockOptional.isPresent()) {
+                Sock sock = sockOptional.get();
+
+                sock.setQuantity(sock.getQuantity()+sockDto.getQuantity());
+                sockDtoList.add(sockMapper.entityToDto(sock));
+            } else {
+                sockDtoList.add(SockDto.builder()
+                        .color(sockDto.getColor())
+                        .cottonPercentage(sockDto.getCottonPercentage())
+                        .quantity(sockDto.getQuantity()).build());
+            }
+        }
+        return sockDtoList;
+    }
+
+    private boolean isCSVFile(MultipartFile file) {
         String fileName = file.getOriginalFilename();
         return fileName != null && fileName.endsWith(".csv");
     }

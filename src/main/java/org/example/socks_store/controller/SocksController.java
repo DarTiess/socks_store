@@ -32,9 +32,9 @@ public class SocksController {
 
      @GetMapping("")
      public ResponseEntity<Long> searchSocks(
-             @RequestParam(required = false) String color,
-             @RequestParam(required = false) int cottonPercentage,
-             @RequestParam(required = false) String operators) {
+             @RequestParam(required = false) @NotNull String color,
+             @RequestParam(required = false) @NotNull int cottonPercentage,
+             @RequestParam(required = false) @NotNull String operators) {
          long count = socksService.searchSocks(color, cottonPercentage, operators);
          return ResponseEntity.ok(count);
      }
