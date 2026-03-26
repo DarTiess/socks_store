@@ -14,12 +14,16 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.InputStream;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -121,7 +125,7 @@ class SocksControllerTest {
     }
 
     @Test
-    void updateSock() throws Exception {
+    void updateSockTest() throws Exception {
         String url = "/api/socks/%d";
 
         when(socksRepository.findById(anyLong()))
@@ -136,4 +140,28 @@ class SocksControllerTest {
                 .andExpect(content()
                         .bytes("[]Socks of color=black was updating. Quantity = 4".getBytes()));
     }
+
+    @Test
+    void batchSocksTest() throws Exception {
+        String url = "/api/socks/batch";
+
+        ClassPathResource classPathResource = new ClassPathResource("test.csv");
+        InputStream inputStream = classPathResource.getInputStream();
+        MockMultipartFile multipartFile = new MockMultipartFile("file",
+                classPathResource.getFilename(),
+                MediaType.TEXT_PLAIN_VALUE,
+                inputStream);
+
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.multipart(url)
+                        .file(multipartFile)
+                        .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+                .andExpect(status().is(200))
+                .andReturn();
+
+        Assertions.assertEquals(mvcResult.getResponse().getStatus(), 200);
+        Assertions.assertEquals(mvcResult.getResponse().getContentAsString(), "[]File was parsing and add to database successfully. Quantity = 3");
+
+    }
+
+
 }
