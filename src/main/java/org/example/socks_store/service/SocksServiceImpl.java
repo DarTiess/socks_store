@@ -129,6 +129,22 @@ public class SocksServiceImpl implements SocksService {
                 .formatted(sockDtoList.size());
     }
 
+    @Override
+    public long searchSocks(String color, Integer cottonPercentage, String sortOperator) {
+       return switch (sortOperator){
+            case "equal" -> socksRepository.sumQuantityByColorAndCottonPercentageEquals(
+                    color, cottonPercentage
+            );
+            case "lessThan" -> socksRepository.sumQuantityByColorAndCottonPercentageLessThan(
+                    color, cottonPercentage
+            );
+            case "moreThan" -> socksRepository.sumQuantityByColorAndCottonPercentageGreaterThan(
+                    color, cottonPercentage
+            );
+            default -> throw new IllegalArgumentException();
+       };
+    }
+
     private boolean isCSVFile(MultipartFile file){
         String fileName = file.getOriginalFilename();
         return fileName != null && fileName.endsWith(".csv");

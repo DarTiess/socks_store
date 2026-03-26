@@ -8,9 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/socks")
 public class SocksController {
@@ -33,7 +30,14 @@ public class SocksController {
         return ResponseEntity.ok(response);
     }
 
-    // @GetMapping("/")
+     @GetMapping("")
+     public ResponseEntity<Long> searchSocks(
+             @RequestParam(required = false) String color,
+             @RequestParam(required = false) int cottonPercentage,
+             @RequestParam(required = false) String operators) {
+         long count = socksService.searchSocks(color, cottonPercentage, operators);
+         return ResponseEntity.ok(count);
+     }
 
     @PutMapping("/{id}")
     public ResponseEntity<String> updateSock(@NotNull @PathVariable("id") Long id,

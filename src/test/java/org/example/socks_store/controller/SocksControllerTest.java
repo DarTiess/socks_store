@@ -163,5 +163,38 @@ class SocksControllerTest {
 
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "black, 30, 10, moreThan",
+            "white, 40, 20, lessThan",
+            "black, 30, 30, equal",
+    })
+    void searchSocksTest(String color, int cottonPercentage, int count, String operators) throws Exception {
+        String url = "/api/socks?color=%s&cottonPercentage=%d&operators=%s"
+                .formatted(color, cottonPercentage, operators);
+
+        switch (operators) {
+            case "equal" -> {
+                when(socksRepository.sumQuantityByColorAndCottonPercentageEquals(
+                        color, cottonPercentage
+                )).thenReturn(Long.valueOf(count));
+            }
+            case "lessThan" -> {
+                when(socksRepository.sumQuantityByColorAndCottonPercentageLessThan(
+                        color, cottonPercentage
+                )).thenReturn(Long.valueOf(count));
+            }
+            case "moreThan" -> {
+                when(socksRepository.sumQuantityByColorAndCottonPercentageGreaterThan(
+                        color, cottonPercentage
+                )).thenReturn(Long.valueOf(count));
+            }
+        }
+
+        mockMvc.perform(get(url))
+                .andExpect(status().is(200))
+                .andExpect(content().string(String.valueOf(count)));
+
+    }
 
 }

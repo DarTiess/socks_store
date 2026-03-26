@@ -3,8 +3,6 @@ package org.example.socks_store.service;
 import org.example.socks_store.dto.SockDto;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-
 public interface SocksService {
 
     String incomingSocks(SockDto sockDto);
@@ -14,4 +12,6 @@ public interface SocksService {
     String updateSock(Long id, SockDto sockDto);
 
     String parseAndSaveSocks(MultipartFile multipartFile);
+
+    long searchSocks(String color, Integer cottonPercentage, String sortOperator);
 }
