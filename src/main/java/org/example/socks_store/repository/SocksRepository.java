@@ -12,21 +12,22 @@ import java.util.Optional;
 public interface SocksRepository extends JpaRepository<Sock, Long> {
     Optional<Sock> findByColorAndCottonPercentage(String color, int cottonPercentage);
 
-    @Query("SELECT SUM(s.quantity) FROM Sock s WHERE s.color = :color " +
-            "AND s.cottonPercentage > :cottonPercentage")
-    Long sumQuantityByColorAndCottonPercentageGreaterThan(
+    @Query("""
+            SELECT SUM(s.quantity) FROM Sock s
+            WHERE (:color IS NULL OR s.color = :color)
+                        AND ((:cottonPercentageMin IS NULL AND :cottonPercentageMax IS NULL)
+                        OR (:cottonPercentageMin IS NOT NULL AND :cottonPercentageMax IS NOT NULL
+                                    AND s.cottonPercentage BETWEEN :cottonPercentageMin AND :cottonPercentageMax)
+                                                OR (:cottonPercentage IS NOT NULL AND :operators IS NOT NULL
+                                                AND ((:operators = "moreThan" AND s.cottonPercentage > :cottonPercentage) OR
+                                                            (:operators = "lessThan" AND s.cottonPercentage < :cottonPercentage) OR
+                                                                        (:operators = "equal" AND s.cottonPercentage = :cottonPercentage)
+                                                                                    )))
+            """)
+    Optional<Long> sumQuantityByFilter(
             @Param("color") String color,
-            @Param("cottonPercentage") int cottonPercentage);
-
-    @Query("SELECT SUM(s.quantity) FROM Sock s WHERE s.color = :color " +
-            "AND s.cottonPercentage < :cottonPercentage")
-    Long sumQuantityByColorAndCottonPercentageLessThan(
-            @Param("color") String color,
-            @Param("cottonPercentage") int cottonPercentage);
-
-    @Query("SELECT SUM(s.quantity) FROM Sock s WHERE s.color = :color " +
-            "AND s.cottonPercentage = :cottonPercentage")
-    Long sumQuantityByColorAndCottonPercentageEquals(
-            @Param("color") String color,
-            @Param("cottonPercentage") int cottonPercentage);
+            @Param("cottonPercentage") Integer cottonPercentage,
+            @Param("operators") String operators,
+            @Param("cottonPercentageMin") Integer cottonPercentageMin,
+            @Param("cottonPercentageMax") Integer cottonPercentageMax);
 }

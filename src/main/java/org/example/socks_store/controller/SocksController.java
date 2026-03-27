@@ -1,5 +1,7 @@
 package org.example.socks_store.controller;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import org.example.socks_store.dto.SockDto;
 import org.example.socks_store.service.SocksService;
@@ -30,14 +32,17 @@ public class SocksController {
         return ResponseEntity.ok(response);
     }
 
-     @GetMapping("")
-     public ResponseEntity<Long> searchSocks(
-             @RequestParam(required = false) @NotNull String color,
-             @RequestParam(required = false) @NotNull int cottonPercentage,
-             @RequestParam(required = false) @NotNull String operators) {
-         long count = socksService.searchSocks(color, cottonPercentage, operators);
-         return ResponseEntity.ok(count);
-     }
+    @GetMapping("")
+    public ResponseEntity<Long> searchSocks(
+            @RequestParam(name = "color", required = false) String color,
+            @RequestParam(name = "cottonPercentage", required = false) @Min(0) @Max(100) Integer cottonPercentage,
+            @RequestParam(name = "operators", required = false) String operators,
+            @RequestParam(name = "cottonPercentageMin", required = false) Integer cottonPercentageMin,
+            @RequestParam(name = "cottonPercentageMax", required = false) Integer cottonPercentageMax) {
+
+        long count = socksService.searchSocks(color, cottonPercentage, operators, cottonPercentageMin, cottonPercentageMax);
+        return ResponseEntity.ok(count);
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<String> updateSock(@NotNull @PathVariable("id") Long id,
@@ -47,7 +52,7 @@ public class SocksController {
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<String> batchSocks(@NotNull @RequestParam("file") MultipartFile file){
+    public ResponseEntity<String> batchSocks(@NotNull @RequestParam("file") MultipartFile file) {
         String parsed = socksService.parseAndSaveSocks(file);
         return ResponseEntity.ok(parsed);
     }

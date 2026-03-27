@@ -1,11 +1,11 @@
 package org.example.socks_store.service;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.transaction.Transactional;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.example.socks_store.dto.SockDto;
+import org.example.socks_store.exeptions.*;
 import org.example.socks_store.mapper.SockMapper;
 import org.example.socks_store.model.Sock;
 import org.example.socks_store.repository.SocksRepository;
@@ -53,11 +53,11 @@ public class SocksServiceImpl implements SocksService {
         Optional<Sock> sock = socksRepository.findByColorAndCottonPercentage(sockDto.getColor(), sockDto.getCottonPercentage());
 
         if (sock.isEmpty()) {
-            throw new IllegalArgumentException();
+            throw new NotFoundSocksException();
         }
 
         if (sock.get().getQuantity() < sockDto.getQuantity()) {
-            throw new IllegalArgumentException();
+            throw new NotEnoughSocksException();
         }
 
         int quantity = sock.get().getQuantity() - sockDto.getQuantity();
@@ -72,7 +72,7 @@ public class SocksServiceImpl implements SocksService {
         Optional<Sock> findedSock = socksRepository.findById(id);
 
         if (findedSock.isEmpty()) {
-            throw new IllegalArgumentException();
+            throw new NotFoundSocksException();
         }
 
         findedSock.get().setColor(sockDto.getColor());
@@ -88,8 +88,9 @@ public class SocksServiceImpl implements SocksService {
 
     @Override
     public String parseAndSaveSocks(MultipartFile multipartFile) {
+
         if (!isCSVFile(multipartFile)) {
-            throw new IllegalArgumentException();
+            throw new IncorrectFormatFileException();
         }
 
         Map<String, SockDto> sockDtoMap = new HashMap<>();
@@ -140,7 +141,7 @@ public class SocksServiceImpl implements SocksService {
                 }
             }
         } catch (IOException e) {
-            throw new IllegalArgumentException();
+            throw new FileProcessingException();
         }
 
         List<SockDto> sockDtoList = createDtoList(sockDtoMap);
@@ -151,26 +152,35 @@ public class SocksServiceImpl implements SocksService {
     }
 
     @Override
-    public long searchSocks(String color, Integer cottonPercentage, String sortOperator) {
+    public long searchSocks(
+            String color,
+            Integer cottonPercentage,
+            String sortOperator,
+            Integer cottonPercentageMin,
+            Integer cottonPercentageMax) {
 
-        String resultColor = color == null ? "*" : color;
-        int resultCottonPercentage = cottonPercentage == null ? 0 : cottonPercentage;
+        if (sortOperator != null && hasNoOperator(sortOperator)) {
+            throw new IncorrectOperatorException();
+        }
 
-        return switch (sortOperator) {
-            case "equal" -> socksRepository.sumQuantityByColorAndCottonPercentageEquals(
-                    resultColor, resultCottonPercentage
-            );
-            case "lessThan" -> socksRepository.sumQuantityByColorAndCottonPercentageLessThan(
-                    resultColor, resultCottonPercentage
-            );
-            case "moreThan" -> socksRepository.sumQuantityByColorAndCottonPercentageGreaterThan(
-                    resultColor, resultCottonPercentage
-            );
-            default -> throw new IllegalArgumentException();
-        };
+        if ((cottonPercentageMin != null
+                || cottonPercentageMax != null)
+                && cottonPercentage != null) {
+            throw new IncorrectCottonPercentageException();
+        }
+
+        return socksRepository.sumQuantityByFilter(color,
+                cottonPercentage, sortOperator,
+                cottonPercentageMin, cottonPercentageMax)
+                .orElse(0L);
     }
 
-
+    private boolean hasNoOperator(String sortOperator) {
+        return switch (sortOperator) {
+            case "moreThan", "lessThan", "equal" -> false;
+            default -> true;
+        };
+    }
 
     private List<SockDto> createDtoList(Map<String, SockDto> sockDtoMap) {
         List<SockDto> sockDtoList = new ArrayList<>();
@@ -182,7 +192,7 @@ public class SocksServiceImpl implements SocksService {
             if (sockOptional.isPresent()) {
                 Sock sock = sockOptional.get();
 
-                sock.setQuantity(sock.getQuantity()+sockDto.getQuantity());
+                sock.setQuantity(sock.getQuantity() + sockDto.getQuantity());
                 sockDtoList.add(sockMapper.entityToDto(sock));
             } else {
                 sockDtoList.add(SockDto.builder()

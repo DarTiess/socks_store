@@ -13,5 +13,10 @@ public interface SocksService {
 
     String parseAndSaveSocks(MultipartFile multipartFile);
 
-    long searchSocks(String color, Integer cottonPercentage, String sortOperator);
+    long searchSocks(String color,
+                     Integer cottonPercentage,
+                     String sortOperator,
+                     Integer cottonPercentageMin,
+                     Integer cottonPercentageMax);
+
 }
