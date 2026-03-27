@@ -1,6 +1,7 @@
 package org.example.socks_store.service;
 
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -18,6 +19,7 @@ import java.util.*;
 
 @Service
 @Transactional
+@Slf4j
 public class SocksServiceImpl implements SocksService {
 
     private final SocksRepository socksRepository;
@@ -43,7 +45,7 @@ public class SocksServiceImpl implements SocksService {
             socksRepository.save(sockMapper.dtoToEntity(sockDto));
             responseMessage = "[]Socks of color=%s was created. Total quantity = %d".formatted(sockDto.getColor(), sockDto.getQuantity());
         }
-
+        log.info(responseMessage);
         return responseMessage;
     }
 
@@ -63,8 +65,9 @@ public class SocksServiceImpl implements SocksService {
         int quantity = sock.get().getQuantity() - sockDto.getQuantity();
         sock.get().setQuantity(quantity);
         socksRepository.save(sock.get());
-
-        return "[]Socks of color=%s was outcoming. Rest quantity = %d".formatted(sockDto.getColor(), quantity);
+        String responseMessage = "[]Socks of color=%s was outcoming. Rest quantity = %d".formatted(sockDto.getColor(), quantity);
+        log.info(responseMessage);
+        return responseMessage;
     }
 
     @Override
@@ -81,9 +84,11 @@ public class SocksServiceImpl implements SocksService {
 
         socksRepository.save(findedSock.get());
 
-        return "[]Socks of color=%s was updating. Quantity = %d"
+        String responseMessage = "[]Socks of color=%s was updating. Quantity = %d"
                 .formatted(sockDto.getColor(), sockDto.getQuantity());
+        log.info(responseMessage);
 
+        return responseMessage;
     }
 
     @Override
@@ -147,8 +152,10 @@ public class SocksServiceImpl implements SocksService {
         List<SockDto> sockDtoList = createDtoList(sockDtoMap);
         socksRepository.saveAll(sockMapper.dtoListToEntitiesList(sockDtoList));
 
-        return "[]File was parsing and add to database successfully. Quantity = %d. Was find %d errors"
+        String responseMessage = "[]File was parsing and add to database successfully. Quantity = %d. Was find %d errors"
                 .formatted(sockDtoList.size(), errorsCount);
+        log.info(responseMessage);
+        return responseMessage;
     }
 
     @Override
@@ -169,10 +176,12 @@ public class SocksServiceImpl implements SocksService {
             throw new IncorrectCottonPercentageException();
         }
 
-        return socksRepository.sumQuantityByFilter(color,
-                cottonPercentage, sortOperator,
-                cottonPercentageMin, cottonPercentageMax)
+        Long result = socksRepository.sumQuantityByFilter(color,
+                        cottonPercentage, sortOperator,
+                        cottonPercentageMin, cottonPercentageMax)
                 .orElse(0L);
+        log.info("Result: {}", result);
+        return result;
     }
 
     private boolean hasNoOperator(String sortOperator) {
@@ -201,6 +210,7 @@ public class SocksServiceImpl implements SocksService {
                         .quantity(sockDto.getQuantity()).build());
             }
         }
+        log.info(sockDtoList.size() + " socks were found.");
         return sockDtoList;
     }
 
